@@ -1,5 +1,54 @@
 <?php
 session_start();
+// ดึงที่อยู่ผู้ใช้
+include './controls/fetchUser.php';
+$address = '';
+if (isset($_SESSION['user_id'])) {
+    include './controls/db.php';
+    $stmtUser = $pdo->prepare("SELECT address FROM users WHERE id = ?");
+    $stmtUser->execute([$_SESSION['user_id']]);
+    $user = $stmtUser->fetch(PDO::FETCH_ASSOC);
+    if ($user) {
+        $address = $user['address'];
+    }
+}
+
+if (isset($_POST['action']) && $_POST['action'] == 'increase' && isset($_POST['productId'])) {
+    $productId = $_POST['productId'];
+    foreach ($_SESSION['cart'] as $key => $item) {
+        if ($item['productId'] == $productId) {
+            $_SESSION['cart'][$key]['quantity'] += 1;
+            break;
+        }
+    }
+}
+
+if (isset($_POST['action']) && $_POST['action'] == 'decrease' && isset($_POST['productId'])) {
+    $productId = $_POST['productId'];
+    foreach ($_SESSION['cart'] as $key => $item) {
+        if ($item['productId'] == $productId && $item['quantity'] > 1) {
+            $_SESSION['cart'][$key]['quantity'] -= 1;
+            break;
+        }
+    }
+}
+
+if (isset($_POST['action']) && $_POST['action'] == 'remove' && isset($_POST['productId'])) {
+    $productId = $_POST['productId'];
+    foreach ($_SESSION['cart'] as $key => $item) {
+        if ($item['productId'] == $productId) {
+            unset($_SESSION['cart'][$key]);
+            break;
+        }
+    }
+}
+//คำนวณราคา
+$totalPrice = 0;
+if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
+    foreach ($_SESSION['cart'] as $item) {
+        $totalPrice += $item['productPrice'] * $item['quantity'];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,7 +113,7 @@ session_start();
 
 <body>
     <?php include './components/header.php'; ?>
-
+    
     <section id="cart_product" class="py-5">
         <div class="container">
             <div class="row justify-content-center">
@@ -83,22 +132,37 @@ session_start();
                                                 </h5>
                                                 <p class="mb-1"><strong style="color:#2d6a4f;">Price:</strong> <?= htmlspecialchars($item['productPrice']); ?> <span style="color:#b68900;">บาท</span></p>
                                                 <p class="mb-0"><strong style="color:#d7263d;">Quantity:</strong> <?= htmlspecialchars($item['quantity']); ?></p>
+                                                <p class="mb-1"><strong>Subtotal:</strong> <?= htmlspecialchars($item['productPrice'] * $item['quantity']); ?> <span style="color:#b68900;">บาท</span></p>
                                             </div>
                                         </div>
                                         <div class="btn-group" role="group" aria-label="Basic example">
-                                            <button class="btn btn-success btn-sm">
-                                                <i class="bi bi-plus-circle-fill"></i> เพิ่ม
+                                            <form method="post" class="d-inline">
+                                                <input type="hidden" name="productId" value="<?= htmlspecialchars($item['productId']); ?>">
+                                                <input type="hidden" name="action" value="increase">
+                                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i>เพิ่ม</button>
+                                            </form>
+                                            <form method="post" class="d-inline">
+                                                <input type="hidden" name="productId" value="<?= htmlspecialchars($item['productId']); ?>">
+                                                <input type="hidden" name="action" value="decrease">
+                                                <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-dash-circle-fill"></i>ลด
                                             </button>
-                                            <button class="btn btn-warning btn-sm">
-                                                <i class="bi bi-dash-circle-fill"></i> ลด
-                                            </button>
-                                            <button class="btn btn-danger btn-sm">
-                                                <i class="bi bi-trash-fill"></i> ลบ
-                                            </button>
+                                            </form>
+                                            <form method="post" class="d-inline" onsubmit="return confirmDelete(event);">
+                                                <input type="hidden" name="productId" value="<?= htmlspecialchars($item['productId']); ?>">
+                                                <input type="hidden" name="action" value="remove">
+                                                <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i>ลบ</button>
+                                            </form>
                                         </div>
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
+
+                        <div class="mt-4 text-right">
+                            <h4><strong>Total Price: <?= number_format($totalPrice, 2) ?></strong></h4>
+                        <?php if (!empty($address)): ?>
+                                <h4><strong>ที่อยู่ผู้รับ: <?= htmlspecialchars($address); ?></strong></h4>
+                            </div>
+                        <?php endif; ?>
                         <?php else: ?>
                             <p class="text-center col-12 py-5" style="color:#b68900; font-size:1.2rem;">ไม่มีสินค้าในตะกร้า</p>
                         <?php endif; ?>
@@ -110,5 +174,24 @@ session_start();
 
     <?php include './components/footer.php'; ?>
 </body>
-
+<script>
+function confirmDelete(event) {
+    event.preventDefault();
+    const form = event.target;
+    Swal.fire({
+        title: 'คุณแน่ใจหรือไม่?',
+        text: "คุณต้องการลบสินค้านี้ออกจากตะกร้า?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d7263d',
+        cancelButtonColor: '#6c63ff',
+        confirmButtonText: 'ใช่, ลบเลย!',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+}
+</script>
 </html>
