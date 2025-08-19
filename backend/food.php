@@ -1,6 +1,4 @@
-<?php
-include './controls/fetchfood.php';
-?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -27,7 +25,7 @@ include './controls/fetchfood.php';
 
 <body>
     <div class="d-flex">
-        <?php include '../backend/components/header.php'; ?>
+
         <main class="p-4 flex-grow-1">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="fw-bold" style="color:#290054"><i class="bi bi-list-ul me-2"></i>เมนูอาหารทั้งหมด</h2>

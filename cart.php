@@ -1,17 +1,6 @@
 <?php
 session_start();
-// ดึงที่อยู่ผู้ใช้
-include './controls/fetchUser.php';
-$address = '';
-if (isset($_SESSION['user_id'])) {
-    include './controls/db.php';
-    $stmtUser = $pdo->prepare("SELECT address FROM users WHERE id = ?");
-    $stmtUser->execute([$_SESSION['user_id']]);
-    $user = $stmtUser->fetch(PDO::FETCH_ASSOC);
-    if ($user) {
-        $address = $user['address'];
-    }
-}
+include './controls/fetchpoom.php'; // เชื่อมต่อฐานข้อมูล
 
 if (isset($_POST['action']) && $_POST['action'] == 'increase' && isset($_POST['productId'])) {
     $productId = $_POST['productId'];
@@ -66,12 +55,14 @@ if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
         body {
             background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
         }
+
         .cart-card {
             background: #fffafc;
             border-radius: 1.5rem;
             box-shadow: 0 4px 24px 0 rgba(180, 200, 255, 0.15);
             border: none;
         }
+
         .list-group-item {
             background: #f7faff;
             border-radius: 1rem !important;
@@ -79,30 +70,36 @@ if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
             border: none;
             box-shadow: 0 2px 8px 0 rgba(180, 200, 255, 0.10);
         }
+
         .btn-group .btn {
             border-radius: 2rem !important;
             font-weight: 500;
         }
+
         .btn-success {
             background: #b2f7ef;
             color: #2d6a4f;
             border: none;
         }
+
         .btn-warning {
             background: #ffe5b4;
             color: #b68900;
             border: none;
         }
+
         .btn-danger {
             background: #ffd6e0;
             color: #d7263d;
             border: none;
         }
+
         .img-thumbnail {
             border-radius: 1rem;
             border: 2px solid #e0eafc;
             box-shadow: 0 2px 8px 0 rgba(180, 200, 255, 0.10);
         }
+
         h2 {
             color: #6c63ff;
             font-weight: 700;
@@ -113,7 +110,7 @@ if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
 
 <body>
     <?php include './components/header.php'; ?>
-    
+
     <section id="cart_product" class="py-5">
         <div class="container">
             <div class="row justify-content-center">
@@ -145,7 +142,7 @@ if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
                                                 <input type="hidden" name="productId" value="<?= htmlspecialchars($item['productId']); ?>">
                                                 <input type="hidden" name="action" value="decrease">
                                                 <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-dash-circle-fill"></i>ลด
-                                            </button>
+                                                </button>
                                             </form>
                                             <form method="post" class="d-inline" onsubmit="return confirmDelete(event);">
                                                 <input type="hidden" name="productId" value="<?= htmlspecialchars($item['productId']); ?>">
@@ -157,15 +154,23 @@ if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
                                 <?php endforeach; ?>
                             </ul>
 
-                        <div class="mt-4 text-right">
-                            <h4><strong>Total Price: <?= number_format($totalPrice, 2) ?></strong></h4>
-                        <?php if (!empty($address)): ?>
-                                <h4><strong>ที่อยู่ผู้รับ: <?= htmlspecialchars($address); ?></strong></h4>
+                            <div class="mt-4 text-right">
+                                <h4><strong>Total Price: <?= number_format($totalPrice, 2) ?></strong></h4>
                             </div>
-                        <?php endif; ?>
                         <?php else: ?>
                             <p class="text-center col-12 py-5" style="color:#b68900; font-size:1.2rem;">ไม่มีสินค้าในตะกร้า</p>
                         <?php endif; ?>
+                        <div>
+                            <h4><strong>Delivery Address:</strong></h4>
+                            <hr>
+                            <?php if (!empty($addr)): ?>
+                                <p>Name: <?= htmlspecialchars($addr['first_name'] ?? '') . ' ' . htmlspecialchars($addr['last_name'] ?? '') ?></p>
+                                <p>Address: <?= htmlspecialchars($addr['address'] ?? '') ?></p>
+                                <p>Email: <?= htmlspecialchars($addr['email'] ?? '') ?></p>
+                            <?php else: ?>
+                                <p>No address on file.</p>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -175,23 +180,24 @@ if (isset($_SESSION['cart']) && count($_SESSION['cart']) > 0) {
     <?php include './components/footer.php'; ?>
 </body>
 <script>
-function confirmDelete(event) {
-    event.preventDefault();
-    const form = event.target;
-    Swal.fire({
-        title: 'คุณแน่ใจหรือไม่?',
-        text: "คุณต้องการลบสินค้านี้ออกจากตะกร้า?",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d7263d',
-        cancelButtonColor: '#6c63ff',
-        confirmButtonText: 'ใช่, ลบเลย!',
-        cancelButtonText: 'ยกเลิก'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            form.submit();
-        }
-    });
-}
+    function confirmDelete(event) {
+        event.preventDefault();
+        const form = event.target;
+        Swal.fire({
+            title: 'คุณแน่ใจหรือไม่?',
+            text: "คุณต้องการลบสินค้านี้ออกจากตะกร้า?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d7263d',
+            cancelButtonColor: '#6c63ff',
+            confirmButtonText: 'ใช่, ลบเลย!',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    }
 </script>
+
 </html>
